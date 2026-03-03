@@ -12,16 +12,18 @@ pub const PAGE: &str = r##"<!DOCTYPE html>
   margin: 0;
   padding: 0;
   border-radius: 0 !important;
+  box-shadow: none !important;
 }
 
 :root { --bg: #F0EDE8; --fg: #0A0A0A; --ac: #FF3000; }
 body.dark { --bg: #0A0A0A; --fg: #F0EDE8; }
 
-html { background: var(--bg); }
-
-body {
+html, body {
   background: var(--bg);
   color: var(--fg);
+}
+
+body {
   font-family: 'Courier New', Courier, monospace;
   font-size: 13px;
   line-height: 1.1;
@@ -35,21 +37,23 @@ hr {
   margin: 0;
 }
 
-.pg {
-  padding: 24px;
-  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
-}
-
 /* ── TITLE ── */
+/* Slams to the true left viewport edge, bleeds off-screen right on mobile */
 .title {
   font-family: 'Space Grotesk', sans-serif;
   font-size: clamp(48px, 12vw, 120px);
   font-weight: 700;
   letter-spacing: -0.04em;
-  line-height: 1;
+  line-height: 1.1;
+  text-transform: uppercase;
   white-space: nowrap;
   display: block;
-  margin-bottom: 12px;
+  padding: 20px 0 14px 0;
+}
+
+/* ── MAIN PADDED AREA ── */
+.pg {
+  padding: 0 24px calc(24px + env(safe-area-inset-bottom, 0px));
 }
 
 /* ── META BAR ── */
@@ -59,7 +63,7 @@ hr {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding-bottom: 18px;
+  padding-bottom: 16px;
 }
 
 .meta-live { flex: 1; }
@@ -104,6 +108,7 @@ hr {
   align-items: center;
   justify-content: center;
   cursor: crosshair;
+  font-family: 'Courier New', Courier, monospace;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -128,7 +133,7 @@ hr {
 }
 .sel-info.on { display: block; }
 
-/* ── PROGRESS TRACK ── */
+/* ── PROGRESS TRACK — 1px raw red line ── */
 .prog-track {
   height: 1px;
   position: relative;
@@ -168,6 +173,7 @@ hr {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  line-height: 1.1;
   position: relative;
   overflow: hidden;
 }
@@ -193,6 +199,7 @@ table {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
+  font-family: 'Courier New', Courier, monospace;
 }
 
 thead th {
@@ -234,6 +241,7 @@ a.a-dl {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.02em;
+  font-family: 'Courier New', Courier, monospace;
 }
 a.a-dl:hover { text-decoration: underline; }
 
@@ -248,6 +256,7 @@ a.a-dl:hover { text-decoration: underline; }
   color: var(--fg);
   padding: 0;
   opacity: 0.35;
+  line-height: 1.1;
 }
 .btn-del:hover { text-decoration: underline; opacity: 1; }
 
@@ -262,9 +271,10 @@ a.a-dl:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
-<div class="pg">
 
-  <span class="title">FILE&#x2014;TRANSFER</span>
+<span class="title">FILE&#x2014;TRANSFER</span>
+
+<div class="pg">
 
   <div class="meta-bar">
     <span class="meta-live"><span id="live-ind">[LIVE]</span> TMPL_IP:TMPL_PORT</span>
