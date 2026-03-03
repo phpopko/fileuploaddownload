@@ -66,41 +66,30 @@ pub async fn index(State(state): State<Arc<AppState>>) -> Response {
     }
     files.sort_by(|a, b| a.0.cmp(&b.0));
 
-    let count = files.len();
-    let file_count_label = match count {
-        0 => "0 files".to_string(),
-        1 => "1 file".to_string(),
-        n => format!("{n} files"),
-    };
     let files_html = if files.is_empty() {
-        r#"<div class="empty-state">
-  <svg width="64" height="56" viewBox="0 0 64 56" fill="none">
-    <path d="M2 20C2 13.373 7.373 8 14 8H26L30 4H50C56.627 4 62 9.373 62 16V44C62 50.627 56.627 56 50 56H14C7.373 56 2 50.627 2 44V20Z"
-          stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
-  </svg>
-  <div class="empty-title">No Files Yet</div>
-  <div class="empty-sub">Drop files into the uploads folder on your PC to share them here</div>
-</div>"#
-            .to_string()
+        r#"<tr><td colspan="6" class="c-empty">&#x2014; NO FILES &#x2014;</td></tr>"#.to_string()
     } else {
         files
             .iter()
-            .map(|(name, size)| {
+            .enumerate()
+            .map(|(idx, (name, size))| {
+                let num = idx + 1;
                 let e = html_escape(name);
-                let (icon_class, icon_label) = file_icon(name);
+                let (_, ext_label) = file_icon(name);
+                let type_cell = if ext_label == "FILE" {
+                    "&#x2014;".to_string()
+                } else {
+                    format!("[{ext_label}]")
+                };
                 format!(
-                    r#"<div class="file-row">
-  <div class="fi {icon_class}">{icon_label}</div>
-  <div class="finfo">
-    <span class="fname" title="{e}">{e}</span>
-    <span class="fsize">{size}</span>
-  </div>
-  <a class="btn-dl" href="/download/{e}" download="{e}">
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <path d="M8 3v8M4.5 8.5l3.5 3 3.5-3" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-  </a>
-</div>"#
+                    r#"<tr data-name="{e}">
+  <td class="c-num">{num}</td>
+  <td class="c-name" title="{e}">{e}</td>
+  <td class="c-size">{size}</td>
+  <td class="c-type">{type_cell}</td>
+  <td class="c-dl"><a class="a-dl" href="/download/{e}" download="{e}">&#x2193; GET</a></td>
+  <td class="c-del"><button class="btn-del" onclick="delRow(this)">&#x00D7; DEL</button></td>
+</tr>"#
                 )
             })
             .collect::<Vec<_>>()
@@ -113,7 +102,6 @@ pub async fn index(State(state): State<Arc<AppState>>) -> Response {
         .replace("TMPL_PORT", &PORT.to_string())
         .replace("TMPL_MAX_MB", &MAX_MB.to_string())
         .replace("TMPL_CHUNK_SIZE", &CHUNK_SIZE_JS.to_string())
-        .replace("TMPL_FILE_COUNT", &file_count_label)
         .replace("TMPL_FILES", &files_html);
 
     let mut response = Html(html).into_response();
@@ -329,5 +317,39 @@ pub async fn download(
             Response::from_parts(parts, Body::new(body))
         }
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Read error").into_response(),
+    }
+}
+
+pub async fn delete_file(
+    State(state): State<Arc<AppState>>,
+    Path(filename): Path<String>,
+) -> impl IntoResponse {
+    // block path traversal before touching the filesystem
+    if filename.contains('/') || filename.contains('\\') || filename.contains("..") {
+        return (StatusCode::BAD_REQUEST, "Invalid filename").into_response();
+    }
+
+    let path = state.upload_dir.join(&filename);
+    let canonical = match path.canonicalize() {
+        Ok(p) => p,
+        Err(_) => return (StatusCode::NOT_FOUND, "Not found").into_response(),
+    };
+    let upload_canonical = match state.upload_dir.canonicalize() {
+        Ok(p) => p,
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "Server error").into_response(),
+    };
+    if !canonical.starts_with(&upload_canonical) {
+        return (StatusCode::FORBIDDEN, "Forbidden").into_response();
+    }
+    if !canonical.is_file() {
+        return (StatusCode::NOT_FOUND, "Not found").into_response();
+    }
+
+    match tokio::fs::remove_file(&canonical).await {
+        Ok(_) => {
+            state.hash_cache.remove(&filename);
+            StatusCode::OK.into_response()
+        }
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Delete failed").into_response(),
     }
 }

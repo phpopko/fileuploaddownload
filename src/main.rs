@@ -5,7 +5,7 @@ mod util;
 
 use axum::{
     extract::DefaultBodyLimit,
-    routing::{get, post},
+    routing::{delete, get, post},
     Router,
 };
 use dashmap::DashMap;
@@ -40,6 +40,7 @@ async fn main() {
         .route("/upload/chunk/:id/:seq", post(handlers::upload_chunk))
         .route("/upload/complete/:id", post(handlers::upload_complete))
         .route("/download/:filename", get(handlers::download))
+        .route("/delete/:filename", delete(handlers::delete_file))
         .layer(DefaultBodyLimit::max(MAX_MB * 1024 * 1024))
         .with_state(state);
 
