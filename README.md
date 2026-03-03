@@ -10,3 +10,5 @@ create this:
 uploads/: Local file storage.
 
 Cargo.toml: Build info.
+
+First project with rust
