@@ -1,0 +1,17 @@
+[package]
+name = "file-transfer"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "transfer"
+path = "src/main.rs"
+
+[dependencies]
+axum       = { version = "0.7", features = ["multipart"] }
+blake3     = "1"
+dashmap    = "5"
+tokio      = { version = "1", features = ["full"] }
+tower      = { version = "0.4", features = ["util"] }
+tower-http = { version = "0.5", features = ["fs"] }
+uuid       = { version = "1", features = ["v4"] }

@@ -1,0 +1,13 @@
+# build output
+target/
+
+# transferred files — never commit these
+uploads/*
+!uploads/.gitkeep
+
+# Claude Code local config
+.claude/
+
+# old Python version
+transfer.py
+requirements.txt
