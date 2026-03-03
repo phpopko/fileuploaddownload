@@ -19,6 +19,36 @@ use tower::ServiceExt;
 use tower_http::services::ServeFile;
 use uuid::Uuid;
 
+// Maps a filename's extension to a CSS icon class and a short label.
+fn file_icon(name: &str) -> (&'static str, String) {
+    let ext = name.rfind('.').map_or("", |i| &name[i + 1..]);
+    let ext_low = ext.to_ascii_lowercase();
+    let class = match ext_low.as_str() {
+        "jpg" | "jpeg" | "png" | "gif" | "webp" | "heic" | "heif"
+        | "bmp" | "svg" | "avif" | "ico" | "tiff" | "tif" => "fi-img",
+
+        "mp4" | "mov" | "avi" | "mkv" | "webm" | "m4v"
+        | "wmv" | "flv" | "ts" | "3gp" => "fi-vid",
+
+        "mp3" | "aac" | "wav" | "flac" | "m4a" | "ogg"
+        | "opus" | "wma" | "aiff" | "alac" => "fi-aud",
+
+        "pdf" | "doc" | "docx" | "xls" | "xlsx" | "ppt" | "pptx"
+        | "txt" | "md" | "csv" | "rtf" | "pages" | "numbers" | "key" => "fi-doc",
+
+        "zip" | "rar" | "7z" | "tar" | "gz" | "bz2"
+        | "xz" | "zst" | "lz4" | "tgz" | "tbz2" => "fi-arc",
+
+        _ => "fi-gen",
+    };
+    let label = if ext.is_empty() {
+        "FILE".to_string()
+    } else {
+        ext.chars().take(4).collect::<String>().to_ascii_uppercase()
+    };
+    (class, label)
+}
+
 pub async fn index(State(state): State<Arc<AppState>>) -> Response {
     let mut files: Vec<(String, String)> = Vec::new();
     if let Ok(mut rd) = tokio::fs::read_dir(&state.upload_dir).await {
@@ -38,22 +68,38 @@ pub async fn index(State(state): State<Arc<AppState>>) -> Response {
 
     let count = files.len();
     let file_count_label = match count {
-        0 => "no files".to_string(),
+        0 => "0 files".to_string(),
         1 => "1 file".to_string(),
         n => format!("{n} files"),
     };
     let files_html = if files.is_empty() {
-        r#"<div class="empty">Place files in the uploads folder to share them here.</div>"#
+        r#"<div class="empty-state">
+  <svg width="64" height="56" viewBox="0 0 64 56" fill="none">
+    <path d="M2 20C2 13.373 7.373 8 14 8H26L30 4H50C56.627 4 62 9.373 62 16V44C62 50.627 56.627 56 50 56H14C7.373 56 2 50.627 2 44V20Z"
+          stroke="white" stroke-width="2.5" stroke-linejoin="round"/>
+  </svg>
+  <div class="empty-title">No Files Yet</div>
+  <div class="empty-sub">Drop files into the uploads folder on your PC to share them here</div>
+</div>"#
             .to_string()
     } else {
         files
             .iter()
             .map(|(name, size)| {
                 let e = html_escape(name);
+                let (icon_class, icon_label) = file_icon(name);
                 format!(
                     r#"<div class="file-row">
-  <div class="file-info"><div class="name" title="{e}">{e}</div><div class="meta">{size}</div></div>
-  <a class="btn btn-ghost" href="/download/{e}" download="{e}">Download</a>
+  <div class="fi {icon_class}">{icon_label}</div>
+  <div class="finfo">
+    <span class="fname" title="{e}">{e}</span>
+    <span class="fsize">{size}</span>
+  </div>
+  <a class="btn-dl" href="/download/{e}" download="{e}">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M8 3v8M4.5 8.5l3.5 3 3.5-3" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </a>
 </div>"#
                 )
             })
